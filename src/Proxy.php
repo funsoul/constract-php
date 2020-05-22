@@ -42,7 +42,7 @@ class Proxy
 
                 $returnData = call_user_func([$this->obj, $name], ...$arguments);
 
-                if (!$contract->isMatchPostCondition($reader, $method, $arguments)) {
+                if (!$contract->isMatchPostCondition($reader, $method, $returnData)) {
                     throw new RuntimeException("unmatched post condition");
                 }
 

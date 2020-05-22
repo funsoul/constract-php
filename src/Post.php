@@ -13,9 +13,7 @@ use Doctrine\Common\Annotations\Annotation\Target;
 class Post
 {
     /**
-     * @Required()
-     *
      * @var string
      */
-    public $condition;
+    public $callback;
 }

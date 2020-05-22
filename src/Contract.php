@@ -6,6 +6,7 @@ namespace Contract;
 
 use Doctrine\Common\Annotations\AnnotationReader;
 use ReflectionMethod;
+use ReflectionParameter;
 use RuntimeException;
 
 /**
@@ -19,6 +20,7 @@ class Contract
      * @param AnnotationReader $reader
      * @param ReflectionMethod $method
      * @param array $arguments
+     *
      * @return bool
      */
     public function isMatchPreCondition(AnnotationReader $reader, ReflectionMethod $method, array $arguments): bool
@@ -29,20 +31,32 @@ class Contract
 
         $paramNames = $this->getParameterNames($method->getParameters());
         $pre = $reader->getMethodAnnotation($method, Pre::class);
-        $parseCondition = $this->parseCondition($pre->condition);
 
-        if (!empty($parseCondition)) {
-            foreach ($paramNames as $index => $paramName) {
-                if (isset($parseCondition[$paramName])) {
-                    $argument = $arguments[$index];
-                    $contract = $parseCondition[$paramName];
+        if ($pre->callback) {
+            if (class_exists($pre->callback)) {
+                return $this->isMatchPreCallback($pre->callback, $arguments);
+            }
 
-                    foreach ($contract['conditions'] as $conditionIndex => $condition) {
-                        $expectValue = $contract['expects'][$conditionIndex];
+            throw new RuntimeException("pre contract callback {$pre->callback} not exists");
+        }
 
-                        $isMatch = $this->match($argument, $condition, $expectValue);
-                        if (!$isMatch) {
-                            return false;
+        if ($pre->condition) {
+            $parser = new Parser($pre->condition);
+            $parseCondition = $parser->getData();
+
+            if (!empty($parseCondition)) {
+                foreach ($paramNames as $index => $paramName) {
+                    if (isset($parseCondition[$paramName])) {
+                        $argument = $arguments[$index];
+                        $contract = $parseCondition[$paramName];
+
+                        foreach ($contract['conditions'] as $conditionIndex => $condition) {
+                            $expectValue = $contract['expects'][$conditionIndex];
+
+                            $isMatch = $this->match($argument, $condition, $expectValue);
+                            if (!$isMatch) {
+                                return false;
+                            }
                         }
                     }
                 }
@@ -52,9 +66,51 @@ class Contract
         return true;
     }
 
-    public function isMatchPostCondition(AnnotationReader $reader, ReflectionMethod $method, array $arguments)
+    /**
+     * @param string $callback
+     * @param array $arguments
+     *
+     * @return bool
+     */
+    public function isMatchPreCallback(string $callback, array $arguments): bool
     {
+        $instance = new $callback();
+
+        return $instance->match($arguments);
+    }
+
+    /**
+     * @param AnnotationReader $reader
+     * @param ReflectionMethod $method
+     * @param $returnData
+     *
+     * @return bool
+     */
+    public function isMatchPostCondition(AnnotationReader $reader, ReflectionMethod $method, $returnData): bool
+    {
+        $post = $reader->getMethodAnnotation($method, Post::class);
+
+        if ($post->callback) {
+            if (class_exists($post->callback)) {
+                return $this->isMatchPostCallback($post->callback, $returnData);
+            }
+
+            throw new RuntimeException("post contract callback {$post->callback} not exists");
+        }
+
         return true;
+    }
+
+    /**
+     * @param string $callback
+     * @param $returnData
+     * @return bool
+     */
+    public function isMatchPostCallback(string $callback, $returnData): bool
+    {
+        $instance = new $callback();
+
+        return $instance->match($returnData);
     }
 
     /**
@@ -66,6 +122,7 @@ class Contract
         $names = [];
 
         if (!empty($parameters)) {
+            /** @var ReflectionParameter $parameter */
             foreach ($parameters as $parameter) {
                 $names[] = $parameter->name;
             }
@@ -74,34 +131,13 @@ class Contract
         return $names;
     }
 
-
-    public function parseCondition(string $condition): array
-    {
-        if (preg_match_all('/([a-zA-Z0-9_]+)\s*([<=>])\s*([a-zA-Z0-9_]+)/', $condition, $matches)) {
-            $len = count($matches[0]);
-
-            list(,$params, $conditions, $expects) = $matches;
-
-            $parses = [];
-
-            for ($i = 0; $i < $len; $i++) {
-                if (isset($parses[$params[$i]])) {
-                    array_push($parses[$params[$i]]['conditions'], $conditions[$i]);
-                    array_push($parses[$params[$i]]['expects'], $expects[$i]);
-                } else {
-                    $parses[$params[$i]] = [
-                        'conditions' => [$conditions[$i]],
-                        'expects' => [$expects[$i]]
-                    ];
-                }
-            }
-
-            return $parses;
-        }
-
-        return [];
-    }
-
+    /**
+     * @param $argument
+     * @param $condition
+     * @param $expectValue
+     *
+     * @return bool
+     */
     public function match($argument, $condition, $expectValue): bool
     {
         switch ($condition) {

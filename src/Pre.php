@@ -13,9 +13,12 @@ use Doctrine\Common\Annotations\Annotation\Target;
 class Pre
 {
     /**
-     * @Required()
-     *
      * @var string
      */
     public $condition;
+
+    /**
+     * @var string
+     */
+    public $callback;
 }

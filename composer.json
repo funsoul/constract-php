@@ -27,7 +27,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "ContractTest\\": "tests"
+            "ContractTest\\": "tests",
+            "ContractExamples\\": "examples"
         }
     }
 }
