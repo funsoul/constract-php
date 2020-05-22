@@ -10,12 +10,8 @@ class MyPreCallback implements ContractCallbackInterface
 {
     public function match($arguments): bool
     {
-        foreach ($arguments as $argument) {
-            if ($argument == 2) {
-                return false;
-            }
-        }
+        list($a, $b) = $arguments;
 
-        return true;
+        return $a >= 1 || $b >= 1;
     }
 }

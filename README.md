@@ -1,6 +1,6 @@
 # contract-php
 
-:u7981: A toy that implements contractual design
+:eyes: A toy that implements contractual design
 
 ![Build Status](https://travis-ci.org/funsoul/contract-php.svg?branch=master)
 ![](https://img.shields.io/badge/PHP-%3E%3D7.1.0-green)
@@ -51,13 +51,9 @@ class MyPreCallback implements ContractCallbackInterface
 {
     public function match($arguments): bool
     {
-        foreach ($arguments as $argument) {
-            if ($argument == 2) {
-                return false;
-            }
-        }
+        list($a, $b) = $arguments;
 
-        return true;
+        return $a >= 1 || $b >= 1;
     }
 }
 ```
@@ -66,7 +62,7 @@ Test.php
 
 ```php
 /**
- * @Pre(callback="ContractExamples\MyPostCallback")
+ * @Pre(callback="ContractExamples\MyPreCallback")
  * @param int $a
  * @param int $b
  * @return int
