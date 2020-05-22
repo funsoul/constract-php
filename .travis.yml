@@ -1,0 +1,19 @@
+language: php
+
+sudo: required
+
+matrix:
+  include:
+    - php: 7.1
+
+before_install:
+  - export PHP_MAJOR="$(`phpenv which php` -r 'echo phpversion();' | cut -d '.' -f 1)"
+  - export PHP_MINOR="$(`phpenv which php` -r 'echo phpversion();' | cut -d '.' -f 2)"
+  - echo $PHP_MAJOR
+  - echo $PHP_MINOR
+
+before_script:
+  - composer install
+
+script:
+  php vendor/bin/phpunit -c phpunit.xml
