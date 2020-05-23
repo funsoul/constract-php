@@ -10,8 +10,13 @@ use Doctrine\Common\Annotations\Annotation\Target;
  * @Annotation
  * @Target({"METHOD"})
  */
-class Post
+class DbcRequire
 {
+    /**
+     * @var string
+     */
+    public $condition;
+
     /**
      * @var string
      */

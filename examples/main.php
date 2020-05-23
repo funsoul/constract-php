@@ -10,4 +10,6 @@ $res1 = $proxy->addTwoNums(1, 1);
 
 $res2 = $proxy->addTwoNumsCallback(1, 1);
 
-var_dump($res1, $res2);
+$res3 = $proxy->multiplyDiscount(2, 2);
+
+var_dump($res1, $res2, $res3);

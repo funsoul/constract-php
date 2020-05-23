@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace ContractExamples;
 
-use Contract\Post;
-use Contract\Pre;
+use Contract\DbcEnsure;
+use Contract\DbcInvariant;
+use Contract\DbcRequire;
 
 class Test {
+    /** @var float */
+    private $discount = 0.5;
+
     /**
-     * @Pre(condition="a >= 1, a < 10, b >= 1")
-     * @Post(callback="ContractExamples\MyPostCallback")
+     * @DbcRequire(condition="a >= 1, a < 10, b >= 1")
+     * @DbcEnsure(callback="ContractExamples\MyEnsureCallback")
      * @param int $a
      * @param int $b
      * @return int
@@ -21,8 +25,8 @@ class Test {
     }
 
     /**
-     * @Pre(callback="ContractExamples\MyPreCallback")
-     * @Post(callback="ContractExamples\MyPostCallback")
+     * @DbcRequire(callback="ContractExamples\MyRequireCallback")
+     * @DbcEnsure(callback="ContractExamples\MyEnsureCallback")
      * @param int $a
      * @param int $b
      * @return int
@@ -30,5 +34,18 @@ class Test {
     public function addTwoNumsCallback(int $a, int $b): int
     {
         return $a + $b;
+    }
+
+    /**
+     * @DbcRequire(callback="ContractExamples\MyRequireCallback")
+     * @DbcEnsure(callback="ContractExamples\MyEnsureCallback")
+     * @DbcInvariant(condition="discount = 0.6")
+     * @param int $a
+     * @param int $b
+     * @return float
+     */
+    public function multiplyDiscount(int $a, int $b): float
+    {
+        return ($a + $b) * $this->discount;
     }
 }

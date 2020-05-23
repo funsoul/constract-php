@@ -16,7 +16,21 @@ composer install
 
 ## Usages
 
-### condition
+### Design by Contract
+
+- Require
+- Ensure
+- Invariant
+
+### Using Annotations
+
+```php
+@DbcRequire(condition="a >= 1, a < 10, b >= 1")
+@DbcInvariant(condition="discount = 0.6")
+@DbcEnsure(callback="ContractExamples\MyEnsureCallback")
+```
+
+### Supported Conditions
 
 - gt >
 - ge >=
@@ -25,31 +39,16 @@ composer install
 - e =
 - ne !=
 
-eg.
+### Custom Callback (If conditions don't meet your needs.)
 
-```php
-/**
- * @Pre(condition="a > 1")
- * @param int $a
- * @param int $b
- * @return int
- */
-public function addTwoNums(int $a, int $b): int
-{
-    return $a + $b;
-}
-```
-
-### custom callback
-
-MyPreCallback.php
+MyRequireCallback.php
 
 ```php
 use Contract\ContractCallbackInterface;
 
-class MyPreCallback implements ContractCallbackInterface
+class MyRequireCallback implements ContractCallbackInterface
 {
-    public function match($arguments): bool
+    public function match(array $arguments): bool
     {
         list($a, $b) = $arguments;
 
@@ -58,30 +57,17 @@ class MyPreCallback implements ContractCallbackInterface
 }
 ```
 
+### Supplier
+
 Test.php
 
 ```php
-/**
- * @Pre(callback="ContractExamples\MyPreCallback")
- * @param int $a
- * @param int $b
- * @return int
- */
-public function addTwoNums(int $a, int $b): int
-{
-    return $a + $b;
-}
-```
-
-### examples
-
-Test.php 
-
-```php
 class Test {
+    /** @var float */
+    private $discount = 0.5;
+
     /**
-     * @Pre(condition="a >= 1, a < 10, b >= 1")
-     * @Post(callback="ContractExamples\MyPostCallback")
+     * @DbcRequire(condition="a >= 1, a < 10, b >= 1")
      * @param int $a
      * @param int $b
      * @return int
@@ -92,8 +78,8 @@ class Test {
     }
 
     /**
-     * @Pre(callback="ContractExamples\MyPreCallback")
-     * @Post(callback="ContractExamples\MyPostCallback")
+     * @DbcRequire(callback="ContractExamples\MyRequireCallback")
+     * @DbcEnsure(callback="ContractExamples\MyEnsureCallback")
      * @param int $a
      * @param int $b
      * @return int
@@ -102,17 +88,35 @@ class Test {
     {
         return $a + $b;
     }
+
+    /**
+     * @DbcRequire(callback="ContractExamples\MyRequireCallback")
+     * @DbcEnsure(callback="ContractExamples\MyEnsureCallback")
+     * @DbcInvariant(condition="discount = 0.6")
+     * @param int $a
+     * @param int $b
+     * @return float
+     */
+    public function multiplyDiscount(int $a, int $b): float
+    {
+        return ($a + $b) * $this->discount;
+    }
 }
 ```
 
-main.php
+### Client
 
 ```php
 /** @var ContractExamples\Test $proxy */
 $proxy = new Contract\Proxy(new ContractExamples\Test());
+
 $res1 = $proxy->addTwoNums(1, 1);
 
 $res2 = $proxy->addTwoNumsCallback(1, 1);
 
-var_dump($res1, $res2);
+$res3 = $proxy->multiplyDiscount(2, 2);
+
+var_dump($res1, $res2, $res3);
 ```
+
+:eyes: Of course, it's just an experimental toy.Enjoy it!

@@ -6,9 +6,9 @@ namespace ContractExamples;
 
 use Contract\ContractCallbackInterface;
 
-class MyPreCallback implements ContractCallbackInterface
+class MyRequireCallback implements ContractCallbackInterface
 {
-    public function match($arguments): bool
+    public function match(array $arguments): bool
     {
         list($a, $b) = $arguments;
 

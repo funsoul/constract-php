@@ -24,7 +24,7 @@ class Parser
      */
     private function parseCondition(string $condition)
     {
-        if (preg_match_all('/([a-zA-Z0-9_]+)\s*([<=>])\s*([a-zA-Z0-9_]+)/', $condition, $matches)) {
+        if (preg_match_all('/([a-zA-Z0-9_]+)\s*([<=>])\s*([a-zA-Z0-9_.]+)/', $condition, $matches)) {
             $len = count($matches[0]);
 
             list(,$params, $conditions, $expects) = $matches;

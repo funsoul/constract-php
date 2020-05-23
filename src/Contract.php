@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Contract;
 
-use Doctrine\Common\Annotations\AnnotationReader;
 use ReflectionMethod;
 use ReflectionParameter;
+use ReflectionProperty;
 use RuntimeException;
 
 /**
@@ -17,46 +17,35 @@ use RuntimeException;
 class Contract
 {
     /**
-     * @param AnnotationReader $reader
+     * @param string $condition
      * @param ReflectionMethod $method
      * @param array $arguments
      *
      * @return bool
      */
-    public function isMatchPreCondition(AnnotationReader $reader, ReflectionMethod $method, array $arguments): bool
+    public function matchRequireCondition(string $condition, ReflectionMethod $method, array $arguments): bool
     {
         if (empty($arguments)) {
             return true;
         }
 
         $paramNames = $this->getParameterNames($method->getParameters());
-        $pre = $reader->getMethodAnnotation($method, Pre::class);
 
-        if ($pre->callback) {
-            if (class_exists($pre->callback)) {
-                return $this->isMatchPreCallback($pre->callback, $arguments);
-            }
+        $parser = new Parser($condition);
+        $parseCondition = $parser->getData();
 
-            throw new RuntimeException("pre contract callback {$pre->callback} not exists");
-        }
+        if (!empty($parseCondition)) {
+            foreach ($paramNames as $index => $paramName) {
+                if (isset($parseCondition[$paramName])) {
+                    $argument = $arguments[$index];
+                    $contract = $parseCondition[$paramName];
 
-        if ($pre->condition) {
-            $parser = new Parser($pre->condition);
-            $parseCondition = $parser->getData();
+                    foreach ($contract['conditions'] as $conditionIndex => $condition) {
+                        $expectValue = $contract['expects'][$conditionIndex];
 
-            if (!empty($parseCondition)) {
-                foreach ($paramNames as $index => $paramName) {
-                    if (isset($parseCondition[$paramName])) {
-                        $argument = $arguments[$index];
-                        $contract = $parseCondition[$paramName];
-
-                        foreach ($contract['conditions'] as $conditionIndex => $condition) {
-                            $expectValue = $contract['expects'][$conditionIndex];
-
-                            $isMatch = $this->match($argument, $condition, $expectValue);
-                            if (!$isMatch) {
-                                return false;
-                            }
+                        $isMatch = $this->match($argument, $condition, $expectValue);
+                        if (!$isMatch) {
+                            return false;
                         }
                     }
                 }
@@ -72,30 +61,81 @@ class Contract
      *
      * @return bool
      */
-    public function isMatchPreCallback(string $callback, array $arguments): bool
+    public function matchRequireCallback(string $callback, array $arguments): bool
     {
         $instance = new $callback();
 
         return $instance->match($arguments);
     }
 
+    public function matchInvariantCondition(string $condition, array $properties, $obj)
+    {
+        if (empty($properties)) {
+            return true;
+        }
+
+        $propertyMap = $this->getPropertyMap($properties, $obj);
+        if (empty($propertyMap)) {
+            return true;
+        }
+
+        $parser = new Parser($condition);
+        $parseCondition = $parser->getData();
+
+        if (!empty($parseCondition)) {
+            foreach ($propertyMap as $propertyName => $propertyValue) {
+                if (isset($parseCondition[$propertyName])) {
+                    $contract = $parseCondition[$propertyName];
+
+                    foreach ($contract['conditions'] as $conditionIndex => $condition) {
+                        $expectValue = $contract['expects'][$conditionIndex];
+
+                        $isMatch = $this->match($propertyValue, $condition, $expectValue);
+                        if (!$isMatch) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
     /**
-     * @param AnnotationReader $reader
+     * @param string $condition
      * @param ReflectionMethod $method
-     * @param $returnData
+     * @param array $arguments
      *
      * @return bool
      */
-    public function isMatchPostCondition(AnnotationReader $reader, ReflectionMethod $method, $returnData): bool
+    public function matchEnsureCondition(string $condition, ReflectionMethod $method, array $arguments): bool
     {
-        $post = $reader->getMethodAnnotation($method, Post::class);
+        if (empty($arguments)) {
+            return true;
+        }
 
-        if ($post->callback) {
-            if (class_exists($post->callback)) {
-                return $this->isMatchPostCallback($post->callback, $returnData);
+        $paramNames = $this->getParameterNames($method->getParameters());
+
+        $parser = new Parser($condition);
+        $parseCondition = $parser->getData();
+
+        if (!empty($parseCondition)) {
+            foreach ($paramNames as $index => $paramName) {
+                if (isset($parseCondition[$paramName])) {
+                    $argument = $arguments[$index];
+                    $contract = $parseCondition[$paramName];
+
+                    foreach ($contract['conditions'] as $conditionIndex => $condition) {
+                        $expectValue = $contract['expects'][$conditionIndex];
+
+                        $isMatch = $this->match($argument, $condition, $expectValue);
+                        if (!$isMatch) {
+                            return false;
+                        }
+                    }
+                }
             }
-
-            throw new RuntimeException("post contract callback {$post->callback} not exists");
         }
 
         return true;
@@ -103,14 +143,14 @@ class Contract
 
     /**
      * @param string $callback
-     * @param $returnData
+     * @param array $arguments
      * @return bool
      */
-    public function isMatchPostCallback(string $callback, $returnData): bool
+    public function matchEnsureCallback(string $callback, array $arguments): bool
     {
         $instance = new $callback();
 
-        return $instance->match($returnData);
+        return $instance->match($arguments);
     }
 
     /**
@@ -129,6 +169,26 @@ class Contract
         }
 
         return $names;
+    }
+
+    /**
+     * @param array $properties
+     * @param $obj
+     * @return array
+     */
+    public function getPropertyMap(array $properties, $obj): array
+    {
+        $map = [];
+
+        if (!empty($properties)) {
+            /** @var ReflectionProperty $property */
+            foreach ($properties as $property) {
+                $property->setAccessible(true);
+                $map[$property->name] = $property->getValue($obj);
+            }
+        }
+
+        return $map;
     }
 
     /**

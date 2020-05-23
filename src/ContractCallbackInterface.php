@@ -11,5 +11,5 @@ namespace Contract;
  */
 interface ContractCallbackInterface
 {
-    public function match($arguments): bool;
+    public function match(array $arguments): bool;
 }
